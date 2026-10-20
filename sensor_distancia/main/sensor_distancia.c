@@ -29,6 +29,7 @@ void app_main(void){
 
     while(1){
 
+        int falha_sensor = 0;
         float duracao, distancia_cm, distancia_m, distancia_final, leituras[5];
 
         for (int i = 0; i < 5; i++) {
@@ -39,8 +40,8 @@ void app_main(void){
 
             int64_t inicio_subida = esp_timer_get_time();
             while (gpio_get_level(26) == 0) {
-                if (esp_timer_get_time() - inicio_subida > 30000) {
-                    // sensor não respondeu a tempo
+                if (esp_timer_get_time() - inicio_subida > 30000) {// sensor não respondeu a tempo
+                    falha_sensor = 1;
                     break;
                 }
             }
@@ -48,15 +49,15 @@ void app_main(void){
 
             int64_t inicio_descida = esp_timer_get_time();
             while (gpio_get_level(26) == 1) {
-                if (esp_timer_get_time() - inicio_descida > 30000) {
-                    // sensor não respondeu a tempo
+                if (esp_timer_get_time() - inicio_descida > 30000) {// sensor não respondeu a tempo
+                    falha_sensor = 1;
                     break;
                 }
             }
             int64_t tempo_descida = esp_timer_get_time();
 
             duracao = tempo_descida - tempo_subida;
-            distancia_cm = duracao / 58.0;
+            distancia_cm = duracao / 57.3;
             distancia_m = distancia_cm / 100.0;
 
             leituras[i] = distancia_m;
@@ -64,22 +65,26 @@ void app_main(void){
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
 
-        for(int i = 0; i < 4; i++){
-            for(int j = 0; j < 4; j++){
-                if(leituras[j] > leituras[j + 1]){
-                    float temp = leituras[j];
-                    leituras[j] = leituras[j + 1];
-                    leituras[j + 1] = temp;
+        if (falha_sensor == 0){
+                for(int i = 0; i < 4; i++){
+                for(int j = 0; j < 4; j++){
+                    if(leituras[j] > leituras[j + 1]){
+                        float temp = leituras[j];
+                        leituras[j] = leituras[j + 1];
+                        leituras[j + 1] = temp;
+                    }
                 }
             }
+            distancia_final = leituras[2];
+
+            printf("A distancia e %.3f metros\n", distancia_final);
+
+            vTaskDelay(100 / portTICK_PERIOD_MS);
         }
-        distancia_final = leituras[2];
+        else{
+            printf("A distancia e null\n");
 
-        printf("A distancia e %.3f metros\n", distancia_final);
-
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+        }
     }
-
-
-
 }
